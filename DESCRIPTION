@@ -1,0 +1,22 @@
+Package: uppy
+Title: Uppy.js File Upload for Shiny
+Version: 0.1.0
+Authors@R:
+    person(given = "Kyle", family = "Walker", email = "kyle@walker-data.com", role = c("aut", "cre"))
+Description: Provides modern file upload capabilities for Shiny applications using
+    Uppy.js. Supports drag-and-drop, progress tracking, and cloud storage sources
+    like Dropbox, Google Drive, and OneDrive via Transloadit Companion.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports:
+    shiny,
+    htmltools,
+    jsonlite,
+    base64enc
+Suggests:
+    testthat (>= 3.0.0),
+    bslib
+URL: https://github.com/yourusername/uppy
+BugReports: https://github.com/yourusername/uppy/issues
