@@ -17,8 +17,10 @@
 #'   modal (FALSE). Default is TRUE.
 #' @param theme Character. Dashboard theme: "light", "dark", or "auto". Default is "light".
 #' @param note Character. Note text to display in the dashboard. Default is NULL.
-#' @param auto_proceed Logical. Whether to automatically start upload after files
-#'   are selected. Default is FALSE.
+#' @param auto_proceed Logical. Whether to automatically process files after they
+#'   are selected. When TRUE, files are immediately available in Shiny.
+#'   When FALSE (default, recommended), user must click the "Upload" button to batch-process files.
+#'   Default is FALSE for stability with large file counts.
 #' @param show_progress_details Logical. Show detailed progress information.
 #'   Default is TRUE.
 #' @param show_remove_button_after_complete Logical. Show remove button after
@@ -51,10 +53,16 @@ uppy_config <- function(max_file_size = NULL,
                         auto_proceed = FALSE,
                         show_progress_details = TRUE,
                         show_remove_button_after_complete = TRUE,
-                        hide_upload_button = FALSE,
+                        hide_upload_button = NULL,
                         proudly_display_powered_by_uppy = FALSE) {
 
   theme <- match.arg(theme)
+
+  # Auto-hide upload button when auto_proceed is TRUE (immediate mode)
+  # Keep button visible by default (FALSE) for stable batch uploads
+  if (is.null(hide_upload_button)) {
+    hide_upload_button <- auto_proceed
+  }
 
   # Build restrictions object
   restrictions <- list()

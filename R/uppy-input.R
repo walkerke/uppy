@@ -166,36 +166,101 @@ uppy_input <- function(input_id,
       // Store uppy instance globally
       window['%s'] = uppy;
 
-      // Handle complete event
+      const container = document.getElementById('%s');
+
+      // Status display helper
+      const updateStatus = (message) => {
+        uppy.info(message, 'info', 3000);
+      };
+
+      const updateShinyInput = (files) => {
+        if (!files || !files.length) {
+          $(container).data('uppy-raw-data', null);
+          $(container).trigger('change');
+          return;
+        }
+
+        let processedCount = 0;
+        const totalFiles = files.length;
+        const filesData = [];
+
+        // Show initial status only (no flooding with updates)
+        if (totalFiles > 10) {
+          console.log(`Processing ${totalFiles} files...`);
+          // Use Uppy's info bar for single persistent message
+          uppy.info(`Processing ${totalFiles} files, please wait...`, 'info', 30000);
+        }
+
+        files.forEach(file => {
+          // Get the File object from Uppy's internal data
+          const fileData = file.data;
+          if (!fileData) {
+            console.error('No data for file:', file.name);
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            filesData.push({
+              name: file.name,
+              size: file.size,
+              type: file.type || 'application/octet-stream',
+              data: e.target.result  // Base64 data
+            });
+
+            processedCount++;
+
+            if (processedCount === totalFiles) {
+              // Store data and trigger input binding
+              $(container).data('uppy-raw-data', {
+                files: filesData,
+                timestamp: Date.now()
+              });
+              $(container).trigger('change');
+
+              // Success message - brief and auto-dismissing
+              if (totalFiles > 1) {
+                uppy.info(`✓ ${totalFiles} files ready`, 'success', 2000);
+                console.log(`✓ ${totalFiles} files processed`);
+              }
+            }
+          };
+          reader.readAsDataURL(fileData);
+        });
+      };
+
+      // Handle files being added (immediate mode only)
+      uppy.on('file-added', (file) => {
+        console.log('File added:', file.name);
+        // Only process immediately if autoProceed is true
+        if (%s) {
+          const currentFiles = uppy.getFiles();
+          updateShinyInput(currentFiles);
+        }
+      });
+
+      // Handle upload completion (batch mode - RECOMMENDED)
+      // This fires ONCE when user clicks Upload, not per-file
       uppy.on('complete', (result) => {
         console.log('Upload complete:', result);
+        // In batch mode, process all files at once
+        if (!%s && result.successful && result.successful.length > 0) {
+          updateShinyInput(result.successful);
+        }
+      });
 
-        if (result.successful.length > 0) {
-          let processedCount = 0;
-          const totalFiles = result.successful.length;
-          const filesData = [];
-
-          result.successful.forEach(file => {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-              filesData.push({
-                name: file.name,
-                size: file.size,
-                type: file.type || 'application/octet-stream',
-                datapath: file.id,
-                data: e.target.result
-              });
-
-              processedCount++;
-              if (processedCount === totalFiles) {
-                // Update Shiny input
-                const container = document.getElementById('%s');
-                $(container).data('uppy-files', filesData);
-                $(container).trigger('change');
-              }
-            };
-            reader.readAsDataURL(file.data);
-          });
+      // Handle file removals
+      uppy.on('file-removed', (file) => {
+        console.log('File removed:', file.name);
+        // Update Shiny with current state (if auto_proceed is true)
+        if (%s) {
+          const currentFiles = uppy.getFiles();
+          if (currentFiles.length === 0) {
+            $(container).data('uppy-raw-data', null);
+            $(container).trigger('change');
+          } else {
+            updateShinyInput(currentFiles);
+          }
         }
       });
 
@@ -207,10 +272,13 @@ uppy_input <- function(input_id,
     ",
     jsonlite::toJSON(uppy_opts, auto_unbox = TRUE),
     jsonlite::toJSON(dashboard_opts, auto_unbox = TRUE),
-    input_id,
+    input_id,  # progress bar target
     plugins_js,
-    instance_name,
-    input_id
+    instance_name,  # global window storage
+    input_id,  # container ID
+    tolower(as.character(config$autoProceed)),  # autoProceed in file-added
+    tolower(as.character(config$autoProceed)),  # autoProceed in complete (inverted)
+    tolower(as.character(config$autoProceed))   # autoProceed in file-removed
   )
 
   # Build UI

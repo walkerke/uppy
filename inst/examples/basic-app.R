@@ -8,6 +8,9 @@ library(uppy)
 ui <- page_fluid(
   titlePanel("Basic Uppy File Upload"),
 
+  p(strong("Batch Mode (Recommended):"), "Add files, review them, then click the Upload button.",
+    "This mode handles large batches (100s of files) reliably."),
+
   sidebarLayout(
     sidebarPanel(
       uppy_input(
@@ -32,23 +35,38 @@ ui <- page_fluid(
 
 server <- function(input, output, session) {
 
+  # Debug: observe what input$files contains
+  observe({
+    if (!is.null(input$files)) {
+      cat("\n=== DEBUG: input$files received ===\n")
+      cat("Class:", class(input$files), "\n")
+      cat("Length:", length(input$files), "\n")
+      cat("Names:", names(input$files), "\n")
+      cat("Structure:\n")
+      str(input$files, max.level = 2)
+      cat("====================================\n\n")
+    }
+  })
+
   # Display uploaded files info
   output$files_table <- renderTable({
     req(input$files)
-    files <- uppy_process_files(input$files)
+    # Files are now a dataframe, just like fileInput()!
     data.frame(
-      Filename = files$name,
-      Size = sprintf("%.2f KB", files$size / 1024),
-      Type = files$type
+      Filename = input$files$name,
+      Size = sprintf("%.2f KB", input$files$size / 1024),
+      Type = input$files$type
     )
   })
 
   # Display raw file information
   output$files_info <- renderPrint({
     req(input$files)
-    files <- uppy_process_files(input$files)
+    # Files are a dataframe with name, size, type, datapath columns
     cat("Files uploaded:\n")
-    str(files)
+    str(input$files)
+    cat("\nDatapaths:\n")
+    print(input$files$datapath)
   })
 
   # Reset button

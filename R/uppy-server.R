@@ -33,33 +33,64 @@ uppy_process_files <- function(files_data, temp_dir = tempdir()) {
     ))
   }
 
+  # Debug: check what we received
+  if (!is.list(files_data)) {
+    stop(sprintf(
+      "files_data must be a list of file objects. Received: %s (class: %s, length: %d). Structure: %s",
+      paste(head(as.character(files_data), 3), collapse = ", "),
+      class(files_data)[1],
+      length(files_data),
+      paste(capture.output(str(files_data, max.level = 2)), collapse = "\n")
+    ))
+  }
+
   # Process each file
   files_list <- lapply(files_data, function(file) {
-    # Create temporary file
-    temp_path <- tempfile(tmpdir = temp_dir, fileext = tools::file_ext(file$name))
-
     tryCatch(
       {
+        # Validate file structure
+        if (!is.list(file)) {
+          warning("Skipping non-list file object")
+          return(NULL)
+        }
+
+        # Get file name and extension
+        file_name <- file$name
+        if (is.null(file_name) || !is.character(file_name) || length(file_name) == 0) {
+          warning("File missing name property")
+          return(NULL)
+        }
+
+        # Get extension safely
+        ext <- tools::file_ext(file_name)
+        if (nchar(ext) > 0) {
+          ext <- paste0(".", ext)
+        }
+
+        # Create temporary file
+        temp_path <- tempfile(tmpdir = temp_dir, fileext = ext)
+
         # Decode base64 data and write to file
-        if (!is.null(file$data) && grepl("^data:", file$data)) {
+        if (!is.null(file$data) && is.character(file$data) && grepl("^data:", file$data)) {
           # Remove data URL prefix
           base64_data <- sub("^data:[^,]+,", "", file$data)
           # Decode and write to temp file
           writeBin(base64enc::base64decode(base64_data), temp_path)
 
           data.frame(
-            name = file$name,
-            size = file$size,
-            type = if (is.null(file$type)) "application/octet-stream" else file$type,
+            name = file_name,
+            size = if (is.null(file$size)) 0 else as.numeric(file$size),
+            type = if (is.null(file$type)) "application/octet-stream" else as.character(file$type),
             datapath = temp_path,
             stringsAsFactors = FALSE
           )
         } else {
+          warning("File ", file_name, " missing valid data property")
           NULL
         }
       },
       error = function(e) {
-        warning("Error processing file ", file$name, ": ", e$message)
+        warning("Error processing file: ", e$message)
         NULL
       }
     )
@@ -104,15 +135,22 @@ uppy_process_files <- function(files_data, temp_dir = tempdir()) {
 uppy_reset <- function(input_id, session = shiny::getDefaultReactiveDomain()) {
   instance_name <- paste0("uppy_", gsub("[^a-zA-Z0-9]", "_", input_id))
 
+  # Clear via custom message handler
   session$sendCustomMessage(
     type = "clearUppy",
     message = list(instance = instance_name)
   )
 
-  # Also update the input value
+  # Clear the Shiny input value directly
   session$sendInputMessage(
     input_id,
     list(reset = TRUE)
+  )
+
+  # Also set the input to NULL via JavaScript
+  session$sendCustomMessage(
+    type = "clearUppyInput",
+    message = list(inputId = input_id)
   )
 
   invisible(NULL)
