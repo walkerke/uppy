@@ -114,21 +114,30 @@ uppy_input <- function(input_id,
     uppy_opts$restrictions <- config$restrictions
   }
 
+  # Add locale configuration if provided
+  if (!is.null(config$locale)) {
+    uppy_opts$locale <- list(strings = config$locale)
+  }
+
   # Build dashboard configuration
   dashboard_opts <- config$dashboard
   dashboard_opts$target <- paste0("#", input_id, "_uppy_container")
 
-  # Build plugins configuration
+  # Build plugins configuration and imports
   plugins_js <- ""
+  plugin_imports <- character(0)
   if (!is.null(plugins) && inherits(plugins, "uppy_plugins")) {
     for (plugin_name in names(plugins)) {
       plugin_config <- plugins[[plugin_name]]
-      plugin_config$target <- "Uppy.Dashboard"
+      plugin_config$target <- "Dashboard"  # ES module syntax
+
+      # Add plugin to imports list
+      plugin_imports <- c(plugin_imports, plugin_name)
 
       plugins_js <- paste0(
         plugins_js,
         sprintf(
-          "uppy.use(Uppy.%s, %s);\n",
+          "      uppy.use(%s, %s);\n",
           plugin_name,
           jsonlite::toJSON(plugin_config, auto_unbox = TRUE)
         )
@@ -144,22 +153,25 @@ uppy_input <- function(input_id,
     custom_css <- generate_uppy_css(style, scope = scope_selector)
   }
 
-  # Build JavaScript initialization code
+  # Build JavaScript initialization code (ES module)
+  # Create import statement with dynamic plugins
+  all_imports <- c("Uppy", "Dashboard", plugin_imports)
+  import_statement <- sprintf(
+    "import { %s } from './uppy-5.1.7/uppy.min.mjs';",
+    paste(all_imports, collapse = ", ")
+  )
+
   js_code <- sprintf(
     "
+    // Import Uppy ES modules
+    %s
+
     $(document).ready(function() {
       // Initialize Uppy
-      const uppy = new Uppy.Uppy(%s);
+      const uppy = new Uppy(%s);
 
-      // Add Dashboard UI
-      uppy.use(Uppy.Dashboard, %s);
-
-      // Add Progress Bar
-      uppy.use(Uppy.ProgressBar, {
-        target: '#%s_uppy_progress',
-        fixed: false,
-        hideAfterFinish: true
-      });
+      // Add Dashboard UI (includes built-in progress/status in Uppy 5.0)
+      uppy.use(Dashboard, %s);
 
       %s
 
@@ -270,9 +282,9 @@ uppy_input <- function(input_id,
       });
     });
     ",
+    import_statement,  # dynamic imports
     jsonlite::toJSON(uppy_opts, auto_unbox = TRUE),
     jsonlite::toJSON(dashboard_opts, auto_unbox = TRUE),
-    input_id,  # progress bar target
     plugins_js,
     instance_name,  # global window storage
     input_id,  # container ID
@@ -292,11 +304,7 @@ uppy_input <- function(input_id,
       class = "uppy-input-container",
       `data-uppy-instance` = instance_name,
       htmltools::div(id = paste0(input_id, "_uppy_container")),
-      htmltools::div(
-        id = paste0(input_id, "_uppy_progress"),
-        style = "margin-top: 1rem;"
-      ),
-      htmltools::tags$script(htmltools::HTML(js_code))
+      htmltools::tags$script(type = "module", htmltools::HTML(js_code))
     )
   )
 }

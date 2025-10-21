@@ -52,6 +52,8 @@ uppy_transloadit <- function(key,
 #'   or a custom config list, or FALSE to disable. Default is NULL (disabled).
 #' @param onedrive Configuration for OneDrive plugin. Use `uppy_transloadit()`
 #'   or a custom config list, or FALSE to disable. Default is NULL (disabled).
+#' @param box Configuration for Box plugin. Use `uppy_transloadit()` to
+#'   configure with Transloadit Companion, or FALSE to disable. Default is NULL (disabled).
 #' @param url Logical or list. Enable URL import plugin. Default is FALSE.
 #' @param webcam Logical or list. Enable webcam capture. Default is FALSE.
 #' @param audio Logical or list. Enable audio recording. Default is FALSE.
@@ -74,6 +76,7 @@ uppy_transloadit <- function(key,
 #' uppy_plugins(
 #'   dropbox = uppy_transloadit(key = "KEY1", credentials_name = "dropbox-creds"),
 #'   google_drive = uppy_transloadit(key = "KEY1", credentials_name = "gdrive-creds"),
+#'   box = uppy_transloadit(key = "KEY1", credentials_name = "box-creds"),
 #'   url = TRUE,
 #'   webcam = TRUE
 #' )
@@ -81,6 +84,7 @@ uppy_transloadit <- function(key,
 uppy_plugins <- function(dropbox = NULL,
                          google_drive = NULL,
                          onedrive = NULL,
+                         box = NULL,
                          url = FALSE,
                          webcam = FALSE,
                          audio = FALSE,
@@ -131,6 +135,21 @@ uppy_plugins <- function(dropbox = NULL,
       )
     } else {
       onedrive
+    }
+  }
+
+  if (!is.null(box) && !isFALSE(box)) {
+    plugins$Box <- if (inherits(box, "uppy_transloadit")) {
+      list(
+        companionUrl = box$companionUrl,
+        companionAllowedHosts = box$companionAllowedHosts,
+        companionKeysParams = list(
+          key = box$key,
+          credentialsName = box$credentialsName
+        )
+      )
+    } else {
+      box
     }
   }
 

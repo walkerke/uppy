@@ -11,9 +11,9 @@
 uppy_dependency <- function() {
   htmltools::htmlDependency(
     name = "uppy",
-    version = "3.21.0",
+    version = "5.1.7",
     src = c(file = system.file("www/uppy", package = "uppy")),
-    script = "uppy.min.js",
+    script = "uppy.min.mjs",
     stylesheet = "uppy.min.css"
   )
 }

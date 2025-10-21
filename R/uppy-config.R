@@ -28,6 +28,10 @@
 #' @param hide_upload_button Logical. Hide the upload button. Default is FALSE.
 #' @param proudly_display_powered_by_uppy Logical. Show "Powered by Uppy" badge.
 #'   Default is FALSE.
+#' @param locale Named list of locale strings to customize Dashboard text.
+#'   Common options include `dropHint`, `dropPasteFiles`, `browseFiles`, etc.
+#'   See [Uppy Dashboard locale documentation](https://uppy.io/docs/dashboard/#locale) for all options.
+#'   Default is NULL (uses Uppy defaults).
 #'
 #' @return A list of configuration options for Uppy
 #' @export
@@ -54,7 +58,8 @@ uppy_config <- function(max_file_size = NULL,
                         show_progress_details = TRUE,
                         show_remove_button_after_complete = TRUE,
                         hide_upload_button = NULL,
-                        proudly_display_powered_by_uppy = FALSE) {
+                        proudly_display_powered_by_uppy = FALSE,
+                        locale = NULL) {
 
   theme <- match.arg(theme)
 
@@ -89,7 +94,8 @@ uppy_config <- function(max_file_size = NULL,
     list(
       restrictions = if (length(restrictions) > 0) restrictions else NULL,
       dashboard = dashboard,
-      autoProceed = auto_proceed
+      autoProceed = auto_proceed,
+      locale = locale
     ),
     class = "uppy_config"
   )

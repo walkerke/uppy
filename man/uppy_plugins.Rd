@@ -8,6 +8,7 @@ uppy_plugins(
   dropbox = NULL,
   google_drive = NULL,
   onedrive = NULL,
+  box = NULL,
   url = FALSE,
   webcam = FALSE,
   audio = FALSE,
@@ -23,6 +24,9 @@ or a custom config list, or FALSE to disable. Default is NULL (disabled).}
 
 \item{onedrive}{Configuration for OneDrive plugin. Use \code{uppy_transloadit()}
 or a custom config list, or FALSE to disable. Default is NULL (disabled).}
+
+\item{box}{Configuration for Box plugin. Use \code{uppy_transloadit()} to
+configure with Transloadit Companion, or FALSE to disable. Default is NULL (disabled).}
 
 \item{url}{Logical or list. Enable URL import plugin. Default is FALSE.}
 
@@ -54,6 +58,7 @@ uppy_plugins(
 uppy_plugins(
   dropbox = uppy_transloadit(key = "KEY1", credentials_name = "dropbox-creds"),
   google_drive = uppy_transloadit(key = "KEY1", credentials_name = "gdrive-creds"),
+  box = uppy_transloadit(key = "KEY1", credentials_name = "box-creds"),
   url = TRUE,
   webcam = TRUE
 )

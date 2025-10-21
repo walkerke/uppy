@@ -18,7 +18,8 @@ uppy_config(
   show_progress_details = TRUE,
   show_remove_button_after_complete = TRUE,
   hide_upload_button = NULL,
-  proudly_display_powered_by_uppy = FALSE
+  proudly_display_powered_by_uppy = FALSE,
+  locale = NULL
 )
 }
 \arguments{
@@ -59,6 +60,11 @@ upload completes. Default is TRUE.}
 
 \item{proudly_display_powered_by_uppy}{Logical. Show "Powered by Uppy" badge.
 Default is FALSE.}
+
+\item{locale}{Named list of locale strings to customize Dashboard text.
+Common options include \code{dropHint}, \code{dropPasteFiles}, \code{browseFiles}, etc.
+See \href{https://uppy.io/docs/dashboard/#locale}{Uppy Dashboard locale documentation} for all options.
+Default is NULL (uses Uppy defaults).}
 }
 \value{
 A list of configuration options for Uppy
