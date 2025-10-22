@@ -64,12 +64,27 @@ uppy_dependencies <- function() {
         return(NULL)
       }
 
-      # Process each file's base64 data
+      # Check if this is Tus mode (files have tusURL field)
+      is_tus_mode <- !is.null(data[[1]]$tusURL) && !is.null(data[[1]]$uploadMode) &&
+                     data[[1]]$uploadMode == "tus"
+
+      if (is_tus_mode) {
+        # Tus mode: download files from Tus server
+        tus_urls <- sapply(data, function(f) f$tusURL)
+        file_names <- sapply(data, function(f) f$name)
+        file_sizes <- sapply(data, function(f) as.numeric(f$size))
+        file_types <- sapply(data, function(f) f$type)
+
+        files_df <- download_tus_files(tus_urls, file_names, file_sizes, file_types)
+        return(files_df)
+      }
+
+      # Base64 mode: process each file's base64 data
       files_list <- lapply(data, function(file) {
         tryCatch({
           # Decode base64 and write to temp file
-          if (!is.null(file$datapath) && grepl("^data:", file$datapath)) {
-            base64_data <- sub("^data:[^,]+,", "", file$datapath)
+          if (!is.null(file$data) && grepl("^data:", file$data)) {
+            base64_data <- sub("^data:[^,]+,", "", file$data)
 
             # Create temp file
             ext <- tools::file_ext(file$name)

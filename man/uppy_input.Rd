@@ -4,7 +4,15 @@
 \alias{uppy_input}
 \title{Create an Uppy file input}
 \usage{
-uppy_input(input_id, config = NULL, plugins = NULL, style = NULL, ...)
+uppy_input(
+  input_id,
+  config = NULL,
+  plugins = NULL,
+  style = NULL,
+  upload_mode = c("base64", "tus"),
+  tus_endpoint = NULL,
+  ...
+)
 }
 \arguments{
 \item{input_id}{Character. The input slot that will be used to access the value.}
@@ -17,6 +25,15 @@ default settings. Can also pass individual config parameters directly (see below
 
 \item{style}{Styling configuration created by \code{uppy_style()}. Default is NULL
 (uses default Uppy styling).}
+
+\item{upload_mode}{Character. Upload mode: "base64" (default) or "tus".
+Use "base64" for files <500MB (simple, works everywhere).
+Use "tus" for large files >500MB (resumable, requires Tus server).
+Default is "base64".}
+
+\item{tus_endpoint}{Character. URL of the Tus server endpoint. Required when
+\code{upload_mode = "tus"}. Can be a self-hosted tusd server or Transloadit.
+Default is NULL.}
 
 \item{...}{Additional arguments passed to \code{uppy_config()} if \code{config} is NULL.
 Allows for simplified configuration without explicitly calling \code{uppy_config()}.}

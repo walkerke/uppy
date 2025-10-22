@@ -12,6 +12,13 @@
 #'   (no cloud storage plugins).
 #' @param style Styling configuration created by `uppy_style()`. Default is NULL
 #'   (uses default Uppy styling).
+#' @param upload_mode Character. Upload mode: "base64" (default) or "tus".
+#'   Use "base64" for files <500MB (simple, works everywhere).
+#'   Use "tus" for large files >500MB (resumable, requires Tus server).
+#'   Default is "base64".
+#' @param tus_endpoint Character. URL of the Tus server endpoint. Required when
+#'   `upload_mode = "tus"`. Can be a self-hosted tusd server or Transloadit.
+#'   Default is NULL.
 #' @param ... Additional arguments passed to `uppy_config()` if `config` is NULL.
 #'   Allows for simplified configuration without explicitly calling `uppy_config()`.
 #'
@@ -89,7 +96,17 @@ uppy_input <- function(input_id,
                        config = NULL,
                        plugins = NULL,
                        style = NULL,
+                       upload_mode = c("base64", "tus"),
+                       tus_endpoint = NULL,
                        ...) {
+
+  # Validate upload_mode
+  upload_mode <- match.arg(upload_mode)
+
+  # Validate tus_endpoint if tus mode
+  if (upload_mode == "tus" && (is.null(tus_endpoint) || tus_endpoint == "")) {
+    stop("tus_endpoint is required when upload_mode = 'tus'", call. = FALSE)
+  }
 
   # If config is NULL, create from ... arguments
   if (is.null(config)) {
@@ -156,10 +173,33 @@ uppy_input <- function(input_id,
   # Build JavaScript initialization code (ES module)
   # Create import statement with dynamic plugins
   all_imports <- c("Uppy", "Dashboard", plugin_imports)
+
+  # Add Tus if using tus upload mode
+  if (upload_mode == "tus") {
+    all_imports <- c(all_imports, "Tus")
+  }
+
   import_statement <- sprintf(
     "import { %s } from './uppy-5.1.7/uppy.min.mjs';",
     paste(all_imports, collapse = ", ")
   )
+
+  # Add Tus configuration if using tus mode
+  tus_js <- ""
+  if (upload_mode == "tus") {
+    tus_config <- list(
+      endpoint = tus_endpoint,
+      retryDelays = c(0, 1000, 3000, 5000),
+      chunkSize = 5 * 1024 * 1024  # 5MB chunks
+    )
+    tus_js <- sprintf(
+      "      // Add Tus for resumable uploads\n      uppy.use(Tus, %s);\n",
+      jsonlite::toJSON(tus_config, auto_unbox = TRUE)
+    )
+  }
+
+  # Combine plugins_js with tus_js
+  all_plugins_js <- paste0(plugins_js, tus_js)
 
   js_code <- sprintf(
     "
@@ -241,6 +281,41 @@ uppy_input <- function(input_id,
         });
       };
 
+      // Handle Tus upload-success event (for Tus mode)
+      uppy.on('upload-success', (file, response) => {
+        console.log('Tus upload success:', file.name, response);
+
+        // For Tus uploads, response contains the upload URL
+        if (response.uploadURL) {
+          // Store Tus URL and metadata
+          const tusData = {
+            name: file.name,
+            size: file.size,
+            type: file.type || 'application/octet-stream',
+            tusURL: response.uploadURL,
+            uploadMode: 'tus'
+          };
+
+          // Get existing files or initialize
+          let allFiles = $(container).data('uppy-tus-files') || [];
+          allFiles.push(tusData);
+          $(container).data('uppy-tus-files', allFiles);
+
+          // Trigger change when all files are uploaded
+          const uploadedCount = allFiles.length;
+          const totalCount = uppy.getFiles().length;
+
+          if (uploadedCount === totalCount) {
+            $(container).data('uppy-raw-data', {
+              files: allFiles,
+              timestamp: Date.now()
+            });
+            $(container).trigger('change');
+            uppy.info(`✓ ${totalCount} files uploaded`, 'success', 2000);
+          }
+        }
+      });
+
       // Handle files being added (immediate mode only)
       uppy.on('file-added', (file) => {
         console.log('File added:', file.name);
@@ -285,7 +360,7 @@ uppy_input <- function(input_id,
     import_statement,  # dynamic imports
     jsonlite::toJSON(uppy_opts, auto_unbox = TRUE),
     jsonlite::toJSON(dashboard_opts, auto_unbox = TRUE),
-    plugins_js,
+    all_plugins_js,  # includes both cloud plugins and Tus if configured
     instance_name,  # global window storage
     input_id,  # container ID
     tolower(as.character(config$autoProceed)),  # autoProceed in file-added

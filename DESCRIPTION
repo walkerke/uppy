@@ -14,7 +14,8 @@ Imports:
     shiny,
     htmltools,
     jsonlite,
-    base64enc
+    base64enc,
+    httr2
 Suggests:
     testthat (>= 3.0.0),
     bslib
